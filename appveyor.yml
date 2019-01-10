@@ -10,8 +10,7 @@ environment:
 
 install:
   - set PATH=%PYTHON%/Scripts;%PYTHON%;%PATH%
-  - python -m pip install --upgarde conan
-  - python -m pip install --upgrade conan-package-tools bincrafters-package-tools
+  - python -m pip install --upgrade conan conan-package-tools
   - conan user
 
 test_script:

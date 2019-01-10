@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import os
-from conans import ConanFile, CMake, tools, RunEnvironment
+from conans import ConanFile, tools, RunEnvironment
+
 
 class VulkanTestConan(ConanFile):
-    settings = 'os', 'compiler', 'build_type', 'arch'
-    generators = 'cmake'
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
+    exports_sources = 'shader.frag'
 
     def test(self):
         if not tools.cross_building(self.settings):
-            with tools.environment_append(RunEnvironment(self).vars), tools.chdir('bin'):
-                self.run(f'.{os.sep}test_package')
+            with tools.environment_append(RunEnvironment(self).vars):
+                self.run('glslangValidator -V "{}/shader.frag"'.format(self.source_folder))
