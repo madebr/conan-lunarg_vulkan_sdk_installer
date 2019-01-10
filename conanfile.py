@@ -3,52 +3,65 @@
 import os
 from conans import ConanFile, tools
 
-class VulkanConan(ConanFile):
-    name = 'vulkan'
-    version = '1.1.82.1'
+
+class LunarGVulkanSDKConan(ConanFile):
+    name = 'lunarg_vulkan_sdk'
+    version = '1.1.92.1'
     description = 'The LunarG Vulkan SDK provides the development and runtime components required to build, run, and debug Vulkan applications.'
-    url = 'https://github.com/birsoyo/conan-vulkan'
+    url = 'https://github.com/bincrafters/conan-lunarg_vulkan_sdk'
     homepage = 'https://vulkan.lunarg.com/sdk/home'
-    author = 'Orhun Birsoy <orhunbirsoy@gmail.com>'
+    author = 'bincrafters <bincrafters@gmail.com>'
 
     license = 'Various'
-
-    # Packages the license for the conanfile.py
     exports = ['LICENSE.md']
 
     settings = 'os', 'arch'
 
-    # Custom attributes for Bincrafters recipe conventions
-    source_subfolder = 'source_subfolder'
-    build_subfolder = 'build_subfolder'
-
-    def build(self):
-        prefix_url = f'https://sdk.lunarg.com/sdk/download/{self.version}'
-        win_url = f'{prefix_url}/windows/VulkanSDK-{self.version}-Installer.exe'
-        mac_url = f'{prefix_url}/mac/vulkansdk-macos-{self.version}.tar.gz'
-        lin_url = f'{prefix_url}/linux/vulkansdk-linux-x86_64-{self.version}.tar.gz'
+    def source(self):
+        prefix_url = 'https://sdk.lunarg.com/sdk/download/{version}'.format(version=self.version)
+        win_url = '{prefix}/windows/VulkanSDK-{version}-Installer.exe'.format(prefix=prefix_url, version=self.version)
+        win_sha256 = '601c019b8dca1ecece47be279c7a77056fe081d2b5f1804ac9c5d80b7bef7fea'
+        mac_url = '{prefix}/mac/vulkansdk-macos-{version}.tar.gz'.format(prefix=prefix_url, version=self.version)
+        mac_sha256 = '1dc5c758ba83cc0b1e3baa533a5b2052afa378df87a84ee3e56ab6d97df12865'
+        lin_url = '{prefix}/linux/vulkansdk-linux-x86_64-{version}.tar.gz'.format(prefix=prefix_url, version=self.version)
+        lin_sha256 = 'bbbdce02334e078e54bd1d796a1d983073054f57379ecfb89aa4194020ad4c32'
 
         if self.settings.os == 'Windows':
             tools.download(win_url, 'vulkan-installer.exe')
-            self.run('vulkan-installer.exe /S')
+            tools.check_sha256('vulkan-installer.exe', win_sha256)
         else:
             if self.settings.os == 'Linux':
                 url = lin_url
+                sha256 = lin_sha256
             elif self.settings.os == 'Macos':
                 url = mac_url
-            tools.get(url, keep_permissions=True)
+                sha256 = mac_sha256
+            tools.get(url, sha256=sha256, keep_permissions=True)
+
+    def build(self):
+        if self.settings.os == 'Windows':
+            self.run('"{}" /S'.format(os.path.join(self.source_folder, 'vulkan-installer.exe')))
 
     def package(self):
-        self.copy(pattern='LICENSE', dst='licenses', src=self.source_subfolder)
-
         if self.settings.os == 'Windows':
-            location = f'C:\\VulkanSDK\\{self.version}'
+            location = 'C:\\VulkanSDK\\{version}'.format(version=self.version)
+            lic_folder = location
+            lic_name = 'LICENSE.txt'
             inc_folder = os.path.join(location, 'Include')
             if self.settings.arch == 'x86':
                 lib_folder = os.path.join(location, 'Lib32')
             elif self.settings.arch == 'x86_64':
                 lib_folder = os.path.join(location, 'Lib')
+        else:
+            lic_folder = self.source_folder
+            lic_name = 'LICENSE'
+            inc_folder = os.path.join(self.source_folder, 'include')
+            if self.settings.arch == 'x86':
+                lib_folder = os.path.join(self.source_folder, 'lib32')
+            elif self.settings.arch == 'x86_64':
+                lib_folder = os.path.join(self.source_folder, 'lib')
 
+        self.copy(pattern=lic_name, dst='licenses', src=lic_folder)
         self.copy(pattern='*', dst='include', src=inc_folder)
         self.copy(pattern='*', dst='lib', src=lib_folder)
 
