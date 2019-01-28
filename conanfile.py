@@ -2,13 +2,14 @@
 
 import os
 from conans import ConanFile, tools
+from conans.errors import ConanInvalidConfiguration
 from conans.util.env_reader import get_env
 import tempfile
 
 
 class LunarGVulkanSDKInstallerConan(ConanFile):
     name = 'vulkan_lunarg_installer'
-    version = '1.1.92.1'
+    version = '1.1.97.0'
     description = 'The LunarG Vulkan SDK provides the development and runtime components required to build, run, and debug Vulkan applications.'
     url = 'https://github.com/bincrafters/conan-lunarg_vulkan_sdk'
     homepage = 'https://vulkan.lunarg.com/sdk/home'
@@ -24,38 +25,31 @@ class LunarGVulkanSDKInstallerConan(ConanFile):
         prefix_url = 'https://sdk.lunarg.com/sdk/download/{version}'.format(version=self.version)
         win_name = 'VulkanSDK-{version}-Installer.exe'.format(version=self.version)
         win_url = '{prefix}/windows/{name}'.format(prefix=prefix_url, name=win_name)
-        win_sha256 = '601c019b8dca1ecece47be279c7a77056fe081d2b5f1804ac9c5d80b7bef7fea'
-        mac_name = 'vulkansdk-linux-{arch}-{version}.tar.gz'.format(arch=self.settings.arch_build, version=self.version)
-        mac_url = '{prefix}/mac/{name}.tar.gz'.format(prefix=prefix_url, name=mac_name)
-        mac_sha256 = {
-            'x86_64': '1dc5c758ba83cc0b1e3baa533a5b2052afa378df87a84ee3e56ab6d97df12865',
-        }
-        lin_name = 'vulkansdk-linux-{arch}-{version}'.format(arch=self.settings.arch_build, version=self.version)
-        lin_url = '{prefix}/linux/{name}.tar.gz'.format(prefix=prefix_url, name=lin_name)
-        lin_sha256 = {
-            'x86_64': 'bbbdce02334e078e54bd1d796a1d983073054f57379ecfb89aa4194020ad4c32',
-        }
+        win_sha256 = 'c46584e9df78b40dd3cddda006ebace9917be25353961472f479c7bd0abd13ee'
+        mac_name = 'vulkansdk-macos-{arch}-{version}.tar.gz'.format(arch=self.settings.arch_build, version=self.version)
+        mac_url = '{prefix}/mac/{name}'.format(prefix=prefix_url, name=mac_name)
+        mac_sha256 = 'a84a6432e049bb7621a6bf2bf643fa19c863fa4f3d8e6ddac9a102036c461edd'
+        lin_name = 'vulkansdk-linux-{arch}-{version}.tar.gz'.format(arch=self.settings.arch_build, version=self.version)
+        lin_url = '{prefix}/linux/{name}'.format(prefix=prefix_url, name=lin_name)
+        lin_sha256 = '9430951ca2fa4d9daca3b4394c15465727de0d31290cd7b5e686cdd6dc47dc8d'
 
         if self.settings.os_build == 'Windows':
             url = win_url
             name = win_name
             sha256 = win_sha256
-        else:
-            if self.settings.os_build == 'Linux':
-                url = lin_url
-                sha256 = lin_sha256[str(self.settings.arch_build)]
-                name = lin_name
-            elif self.settings.os_build == 'Macos':
-                url = mac_url
-                sha256 = mac_sha256[str(self.settings.arch_build)]
-                name = mac_name
+        elif self.settings.os_build == 'Linux':
+            url = lin_url
+            sha256 = lin_sha256
+            name = lin_name
+        elif self.settings.os_build == 'Macos':
+            url = mac_url
+            sha256 = mac_sha256
+            name = mac_name
 
-        targetdlfn = '{}'.format(os.path.join(tempfile.gettempdir(), name))
-        if self.settings.os_build != 'Windows':
-            targetdlfn += '.tar.gz'
+        targetdlfn = os.path.join(tempfile.gettempdir(), name)
 
         # cache downloads because lunarg has rate limit of 5 downloads per url per 24h
-        # (this ratelimit can be overridden by adding "?human=true" to the url
+        # (this ratelimit can be overridden by adding "?Human=true" to the url
         if get_env('LUNARG_HUMAN', False):
             url += '?Human=true'
         if os.path.exists(targetdlfn) and not get_env('LUNARG_FORCE_DOWNLOAD', False):
@@ -105,6 +99,9 @@ class LunarGVulkanSDKInstallerConan(ConanFile):
 
 
     def package_info(self):
+        if self.settings.os_build != 'Windows' and self.settings.arch_build != 'x86_64':
+            raise ConanInvalidConfiguration('LunarG Vulkan SDK only supports 64-bit')
+
         self.cpp_info.bindirs = ['bin']
         if self.settings.os_build == 'Windows':
             self.cpp_info.bindirs.append('bin/tools')
